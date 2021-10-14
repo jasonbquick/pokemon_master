@@ -1,72 +1,91 @@
-import React, {useEffect, useState} from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import "./App.css";
 
-function Dashboard(){
-  const [list, setList] = useState([])
-  const [pokemon, setPokemon] = useState([]);
-  const [suggest, setSuggest] = useState({
-    value: '',
-    suggestions: []
-  })
-
+const Auto = () => {
+  const [display, setDisplay] = useState(false);
+  const [options, setOptions] = useState([]);
+  const [search, setSearch] = useState("");
+  const wrapperRef = useRef(null);
 
   useEffect(() => {
-    loadPokemon()
-  }, [])
+    const pokemon = [];
+    const promises = new Array(898)
+      .fill()
+      .map((v, i) => fetch(`https://pokeapi.co/api/v2/pokemon-form/${i + 1}`));
+    Promise.all(promises).then(pokemonArr => {
+      return pokemonArr.map(value =>
+        value
+          .json()
+          .then(({ name, sprites: { front_default: sprite } }) =>
+            pokemon.push({ name, sprite })
+          )
+      );
+    });
+    setOptions(pokemon);
+  }, []);
 
+  useEffect(() => {
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  });
 
-  async function loadPokemon(){
-    const rez = await fetch('https://pokeapi.co/api/v2/pokemon?offset=20&limit=1118')
-    const data = await rez.json();
-    console.log(data)
-    setList(data.results)
-    // setPokemon(data.slice())
-    console.log(list)
-    // console.log(data.results)
-  }
+  const handleClickOutside = event => {
+    const { current: wrap } = wrapperRef;
+    if (wrap && !wrap.contains(event.target)) {
+      setDisplay(false);
+    }
+  };
 
-  
+  const updatePokeDex = poke => {
+    setSearch(poke);
+    setDisplay(false);
+  };
 
   return (
-    <div>
-    <div className="vw-100 vh-100 primary-color d-flex justify-content-center">
-    <div className="jumbotron jumbotron-fluid bg-transparent">
-      <div className="container secondary-color">
-        <h1 className="display-4">Pokemon Weakness</h1>
-        <p className="lead">
-          Input your Pokemon team to identify their weaknesses
-        </p>
-        <hr className="my-4" />
+    <div ref={wrapperRef} className="flex-container flex-column pos-rel">
+      <input
+        id="auto"
+        onClick={() => setDisplay(!display)}
+        placeholder="Type to search"
+        value={search}
+        onChange={event => setSearch(event.target.value)}
+      />
+      {display && (
+        <div className="autoContainer">
+          {options
+            .filter(({ name }) => name.indexOf(search.toLowerCase()) > -1)
+            .map((value, i) => {
+              return (
+                <div
+                  onClick={() => updatePokeDex(value.name)}
+                  className="option"
+                  key={i}
+                  tabIndex="0"
+                >
+                  <span>{value.name}</span>
+                  <img src={value.sprite} alt="pokemon" />
+                </div>
+              );
+            })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <div className="App">
+      <h1>Pokemon Team Weakness Calculator</h1>
+      <h3>Input your Pokemon team to calculate your team's overall weaknesses</h3>
+      <div className="logo"></div>
+      <div className="auto-container">
+        <Auto />
       </div>
     </div>
-  </div>
-  </div>
-  
-  )
+  );
 }
 
-export default Dashboard
-
-// import React from "react";
-// import { Link } from "react-router-dom";
-
-// export default () => (
-//   <div className="vw-100 vh-100 primary-color d-flex align-items-center justify-content-center">
-//     <div className="jumbotron jumbotron-fluid bg-transparent">
-//       <div className="container secondary-color">
-//         <h1 className="display-4">Food Recipes</h1>
-//         <p className="lead">
-//           A curated list of recipes for the best homemade meal and delicacies.
-//         </p>
-//         <hr className="my-4" />
-//         <Link
-//           to="/recipes"
-//           className="btn btn-lg custom-button"
-//           role="button"
-//         >
-//           View Recipes
-//         </Link>
-//       </div>
-//     </div>
-//   </div>
-// );
+export default App;
